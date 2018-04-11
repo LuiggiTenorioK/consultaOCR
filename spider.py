@@ -76,6 +76,9 @@ def getData(driver,ruc):
 
 
 
+
+
+
 def main(rucs):
     url='http://e-consultaruc.sunat.gob.pe/cl-ti-itmrconsruc/frameCriterioBusqueda.jsp'
 
