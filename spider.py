@@ -6,6 +6,8 @@ import pytesseract
 import cv2
 import random
 import platform
+import pickle
+import copy
 
 def get_proxy_server():
     aleatorio = random.randint(0, 1)
@@ -58,37 +60,40 @@ def get_driver():
     return driver
 
 
-
-def collectData(driver,ruc):
-    result={}
-    result['Razon_Social']=driver.find_element_by_xpath('/html/body/table[1]/tbody/tr[1]/td[2]').text
-    result['Tipo']=driver.find_element_by_xpath('/html/body/table[1]/tbody/tr[2]/td[2]').text
-    result['Nombre_Comercial']=driver.find_element_by_xpath('/html/body/table[1]/tbody/tr[3]/td[2]').text
-    result['Estado']=driver.find_element_by_xpath('/html/body/table[1]/tbody/tr[5]/td[2]').text
-    result['Condicion']=driver.find_element_by_xpath('/html/body/table[1]/tbody/tr[6]/td[2]').text
-    result['Direccion'] = driver.find_element_by_xpath('/html/body/table[1]/tbody/tr[7]/td[2]').text
-    result['ActividadesEconomicas'] = driver.find_element_by_xpath('/html/body/table[1]/tbody/tr[10]/td[2]/select').innerHTML
-
-    #Representantes Legales
+def subCollectRepresentanteLegal(driver,result):
+    # Representantes Legales
     driver.find_element_by_xpath('//*[@id="div_estrep"]/table/tbody/tr[3]/td/form/input[1]').click()
     sleep(2)
-    result['RepresentantesLegales']=[]
-    i=2
+    result['RepresentantesLegales'] = list()
+    i = 2
     while 1:
         try:
-            rep={}
-            rep['Documento']=driver.find_element_by_xpath('//*[@id="print"]/table[2]/tbody/tr/td/table/tbody/tr/td/table/tbody/tr['+str(i)+']/td[1]').text
-            rep['NroDocumento']=driver.find_element_by_xpath('//*[@id="print"]/table[2]/tbody/tr/td/table/tbody/tr/td/table/tbody/tr['+str(i)+']/td[2]').text
-            rep['Nombre']=driver.find_element_by_xpath('//*[@id="print"]/table[2]/tbody/tr/td/table/tbody/tr/td/table/tbody/tr['+str(i)+']/td[3]').text
-            rep['Cargo']=driver.find_element_by_xpath('//*[@id="print"]/table[2]/tbody/tr/td/table/tbody/tr/td/table/tbody/tr['+str(i)+']/td[4]').text
-            rep['FechaDesde']=driver.find_element_by_xpath('//*[@id="print"]/table[2]/tbody/tr/td/table/tbody/tr/td/table/tbody/tr['+str(i)+']/td[5]').text
+            rep = {}
+            rep['Documento'] = driver.find_element_by_xpath(
+                '//*[@id="print"]/table[2]/tbody/tr/td/table/tbody/tr/td/table/tbody/tr[' + str(i) + ']/td[1]').text
+            rep['NroDocumento'] = driver.find_element_by_xpath(
+                '//*[@id="print"]/table[2]/tbody/tr/td/table/tbody/tr/td/table/tbody/tr[' + str(i) + ']/td[2]').text
+            rep['Nombre'] = driver.find_element_by_xpath(
+                '//*[@id="print"]/table[2]/tbody/tr/td/table/tbody/tr/td/table/tbody/tr[' + str(i) + ']/td[3]').text
+            rep['Cargo'] = driver.find_element_by_xpath(
+                '//*[@id="print"]/table[2]/tbody/tr/td/table/tbody/tr/td/table/tbody/tr[' + str(i) + ']/td[4]').text
+            rep['FechaDesde'] = driver.find_element_by_xpath(
+                '//*[@id="print"]/table[2]/tbody/tr/td/table/tbody/tr/td/table/tbody/tr[' + str(i) + ']/td[5]').text
             result['RepresentantesLegales'].append(rep)
         except Exception as e:
             break
-        i+=1
-    driver.back()
+        i += 1
 
-    #Trabajadores y Prestatarios
+    cookies = pickle.load(open("cookies.pkl", "rb"))
+    for cookie in cookies:
+        driver.add_cookie(cookie)
+
+    driver.find_element_by_xpath('//*[@id="div_estrep"]/table/tbody/tr[1]/td/div/input').click()
+
+    return result
+
+def subCollectPeriodo(driver,result):
+    # Trabajadores y Prestatarios
     driver.find_element_by_xpath('//*[@id="div_estrep"]/table/tbody/tr[1]/td[4]/form/input[1]').click()
     sleep(2)
     result['Periodico'] = []
@@ -97,19 +102,59 @@ def collectData(driver,ruc):
         try:
             reg = {}
             reg['Periodo'] = driver.find_element_by_xpath(
-                '//*[@id="print"]/table[3]/tbody/tr/td/table/tbody/tr['+str(i)+']/td[1]').text
+                '//*[@id="print"]/table[3]/tbody/tr/td/table/tbody/tr[' + str(i) + ']/td[1]').text
             reg['NroTrabajadores'] = driver.find_element_by_xpath(
-                '//*[@id="print"]/table[3]/tbody/tr/td/table/tbody/tr['+str(i)+']/td[2]').text
+                '//*[@id="print"]/table[3]/tbody/tr/td/table/tbody/tr[' + str(i) + ']/td[2]').text
             reg['NroPensionistas'] = driver.find_element_by_xpath(
-                '//*[@id="print"]/table[3]/tbody/tr/td/table/tbody/tr['+str(i)+']/td[3]').text
+                '//*[@id="print"]/table[3]/tbody/tr/td/table/tbody/tr[' + str(i) + ']/td[3]').text
             reg['NroPrestadores'] = driver.find_element_by_xpath(
-                '//*[@id="print"]/table[3]/tbody/tr/td/table/tbody/tr['+str(i)+']/td[4]').text
+                '//*[@id="print"]/table[3]/tbody/tr/td/table/tbody/tr[' + str(i) + ']/td[4]').text
             result['Periodico'].append(reg)
         except Exception as e:
             break
         i += 1
-    driver.back()
 
+    cookies = pickle.load(open("cookies.pkl", "rb"))
+    for cookie in cookies:
+        driver.add_cookie(cookie)
+
+    driver.find_element_by_xpath('/html/body/table[1]/tbody/tr[1]/td/div/input').click()
+
+    return result
+
+
+def collectData(driver):
+    result={}
+    result['Razon_Social']=driver.find_element_by_xpath('/html/body/table[1]/tbody/tr[1]/td[2]').text
+    result['Tipo']=driver.find_element_by_xpath('/html/body/table[1]/tbody/tr[2]/td[2]').text
+    result['Nombre_Comercial']=driver.find_element_by_xpath('/html/body/table[1]/tbody/tr[3]/td[2]').text
+    result['Estado']=driver.find_element_by_xpath('/html/body/table[1]/tbody/tr[5]/td[2]').text
+    result['Condicion']=driver.find_element_by_xpath('/html/body/table[1]/tbody/tr[6]/td[2]').text
+    result['Direccion'] = driver.find_element_by_xpath('/html/body/table[1]/tbody/tr[7]/td[2]').text
+    result['ActividadesEconomicas'] = driver.find_element_by_xpath('/html/body/table[1]/tbody/tr[10]/td[2]/select').get_attribute("innerHTML")
+    print('previo')
+    print(result)
+
+    print(driver.current_url)
+
+    pickle.dump(driver.get_cookies(), open("cookies.pkl", "wb"))
+    result=subCollectRepresentanteLegal(copy.copy(driver),result)
+
+    print('previo')
+    print(result)
+    driver.save_screenshot("info.png")
+
+    pickle.dump(driver.get_cookies(), open("cookies.pkl", "wb"))
+    result=subCollectPeriodo(driver,result)
+
+    print('previo')
+    print(result)
+    driver.save_screenshot("info.png")
+
+    '''
+    driver.find_element_by_xpath('//*[@id="div_estrep"]/table/tbody/tr[1]/td/div/input').click()
+    driver.find_element_by_xpath('/html/body/table[1]/tbody/tr[1]/td/div/input').click()
+    '''
     return result
 
 
@@ -131,6 +176,7 @@ def procesaCaptcha(driver):
     # convertimos la imagen a texto utilizando texto
     text_ocr = pytesseract.image_to_string(Image.open("captcha_gray.png"))
     text_ocr = text_ocr.strip()
+    text_ocr=text_ocr.replace(" ", "")
     # imprimimos la informacion siempre y cuando tenga el tamanho de caracteres correctos
     if len(text_ocr) == 4:  # SUNEDU, tiene 3 caracteres su captcha
         return text_ocr
@@ -155,9 +201,24 @@ def getData(driver,url,ruc):
         #CAPTCHA
         capt = ''
         while len(capt)!=4:
-            driver.find_element_by_xpath('/html/body/form/table/tbody/tr/td/table[2]/tbody/tr[2]/td[4]/a').click()
-            sleep(8)
             driver.set_window_size(1124, 850)
+            driver.save_screenshot("screencaptcha.png")
+            img = Image.open("screencaptcha.png")
+            img1 = img.crop((804, 35, 910, 90))
+            driver.find_element_by_xpath('/html/body/form/table/tbody/tr/td/table[2]/tbody/tr[2]/td[4]/a').click()
+            driver.save_screenshot("screencaptcha.png")
+            img = Image.open("screencaptcha.png")
+            img2 = img.crop((804, 35, 910, 90))
+
+            while img1==img2:
+                driver.save_screenshot("screencaptcha.png")
+                img = Image.open("screencaptcha.png")
+                img2 = img.crop((804, 35, 910, 90))
+                sleep(1)
+                print('Cargando captcha')
+
+
+
             capt = procesaCaptcha(driver)
             print(capt)
 
@@ -187,10 +248,10 @@ def getData(driver,url,ruc):
         sleep(2)
         #Verificacion de pagina de datos
         try:
-            verif=driver.find_element_by_xpath('/html/body/table[1]/tbody/tr[1]/td[1]')
+            verif=driver.find_element_by_xpath('/html/body/table[1]/tbody/tr[1]/td[1]').text
             if "RUC" in verif:
                 print('data ready for: ' + str(ruc))
-                result=collectData(driver,ruc)
+                result=collectData(driver)
 
                 return result
             else:
