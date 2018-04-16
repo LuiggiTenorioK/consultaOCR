@@ -2,18 +2,122 @@ import pandas as pd
 from time import sleep, time
 from selenium import webdriver
 from PIL import Image
-import cv2
 import pytesseract
+import cv2
+import random
+import platform
 
-def collectData():
+def get_proxy_server():
+    aleatorio = random.randint(0, 1)
+    arr_proxy = ["190.117.188.223:3128","200.60.130.162:3128"]
+    return arr_proxy[aleatorio]
 
+def get_driver():
+    from selenium.webdriver.common.desired_capabilities import DesiredCapabilities
+    proxy_server = get_proxy_server()
+    dcap = dict(DesiredCapabilities.PHANTOMJS)
+    dcap['platform'] = "WINDOWS"
+    dcap['version'] = "10"
+
+    user_agent_list = [
+        "Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.1 (KHTML, like Gecko) Chrome/22.0.1207.1 Safari/537.1",
+        "Mozilla/5.0 (X11; CrOS i686 2268.111.0) AppleWebKit/536.11 (KHTML, like Gecko) Chrome/20.0.1132.57 Safari/536.11",
+        "Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/536.6 (KHTML, like Gecko) Chrome/20.0.1092.0 Safari/536.6",
+        "Mozilla/5.0 (Windows NT 6.2) AppleWebKit/536.6 (KHTML, like Gecko) Chrome/20.0.1090.0 Safari/536.6",
+        "Mozilla/5.0 (Windows NT 6.2; WOW64) AppleWebKit/537.1 (KHTML, like Gecko) Chrome/19.77.34.5 Safari/537.1",
+        "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/536.5 (KHTML, like Gecko) Chrome/19.0.1084.9 Safari/536.5",
+        "Mozilla/5.0 (Windows NT 6.0) AppleWebKit/536.5 (KHTML, like Gecko) Chrome/19.0.1084.36 Safari/536.5",
+        "Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/536.3 (KHTML, like Gecko) Chrome/19.0.1063.0 Safari/536.3",
+        "Mozilla/5.0 (Windows NT 5.1) AppleWebKit/536.3 (KHTML, like Gecko) Chrome/19.0.1063.0 Safari/536.3",
+        "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_8_0) AppleWebKit/536.3 (KHTML, like Gecko) Chrome/19.0.1063.0 Safari/536.3",
+        "Mozilla/5.0 (Windows NT 6.2) AppleWebKit/536.3 (KHTML, like Gecko) Chrome/19.0.1062.0 Safari/536.3",
+        "Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/536.3 (KHTML, like Gecko) Chrome/19.0.1062.0 Safari/536.3",
+        "Mozilla/5.0 (Windows NT 6.2) AppleWebKit/536.3 (KHTML, like Gecko) Chrome/19.0.1061.1 Safari/536.3",
+        "Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/536.3 (KHTML, like Gecko) Chrome/19.0.1061.1 Safari/536.3",
+        "Mozilla/5.0 (Windows NT 6.1) AppleWebKit/536.3 (KHTML, like Gecko) Chrome/19.0.1061.1 Safari/536.3",
+        "Mozilla/5.0 (Windows NT 6.2) AppleWebKit/536.3 (KHTML, like Gecko) Chrome/19.0.1061.0 Safari/536.3",
+        "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/535.24 (KHTML, like Gecko) Chrome/19.0.1055.1 Safari/535.24",
+        "Mozilla/5.0 (Windows NT 6.2; WOW64) AppleWebKit/535.24 (KHTML, like Gecko) Chrome/19.0.1055.1 Safari/535.24",
+        'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/48.0.2564.116 Safari/537.36'
+       ]
+
+    dcap["phantomjs.page.settings.userAgent"] = user_agent_list[random.randrange(1, len(user_agent_list)-1, 1)]
+
+    if platform.system() == 'Linux':
+        #driver = webdriver.PhantomJS(executable_path="/usr/local/bin/phantomjs", desired_capabilities=dcap,
+        #                                  service_args=['--ignore-ssl-errors=true', '--ssl-protocol=TLSv1',
+        #                                                '--proxy=127.0.0.1:9050', '--proxy-type=socks5'])
+        driver = webdriver.PhantomJS(executable_path="/usr/local/bin/phantomjs", desired_capabilities=dcap,
+                                     service_args=['--ignore-ssl-errors=true', '--ssl-protocol=TLSv1',
+                                                   '--proxy=' + proxy_server, '--proxy-type=http'])
+    else:
+        driver = webdriver.PhantomJS(
+            executable_path="phantomjs/phantomjs.exe",
+            desired_capabilities=dcap)
+
+    return driver
+
+
+
+def collectData(driver,ruc):
+    result={}
+    result['Razon_Social']=driver.find_element_by_xpath('/html/body/table[1]/tbody/tr[1]/td[2]').text
+    result['Tipo']=driver.find_element_by_xpath('/html/body/table[1]/tbody/tr[2]/td[2]').text
+    result['Nombre_Comercial']=driver.find_element_by_xpath('/html/body/table[1]/tbody/tr[3]/td[2]').text
+    result['Estado']=driver.find_element_by_xpath('/html/body/table[1]/tbody/tr[5]/td[2]').text
+    result['Condicion']=driver.find_element_by_xpath('/html/body/table[1]/tbody/tr[6]/td[2]').text
+    result['Direccion'] = driver.find_element_by_xpath('/html/body/table[1]/tbody/tr[7]/td[2]').text
+    result['ActividadesEconomicas'] = driver.find_element_by_xpath('/html/body/table[1]/tbody/tr[10]/td[2]/select').innerHTML
+
+    #Representantes Legales
+    driver.find_element_by_xpath('//*[@id="div_estrep"]/table/tbody/tr[3]/td/form/input[1]').click()
+    sleep(2)
+    result['RepresentantesLegales']=[]
+    i=2
+    while 1:
+        try:
+            rep={}
+            rep['Documento']=driver.find_element_by_xpath('//*[@id="print"]/table[2]/tbody/tr/td/table/tbody/tr/td/table/tbody/tr['+str(i)+']/td[1]').text
+            rep['NroDocumento']=driver.find_element_by_xpath('//*[@id="print"]/table[2]/tbody/tr/td/table/tbody/tr/td/table/tbody/tr['+str(i)+']/td[2]').text
+            rep['Nombre']=driver.find_element_by_xpath('//*[@id="print"]/table[2]/tbody/tr/td/table/tbody/tr/td/table/tbody/tr['+str(i)+']/td[3]').text
+            rep['Cargo']=driver.find_element_by_xpath('//*[@id="print"]/table[2]/tbody/tr/td/table/tbody/tr/td/table/tbody/tr['+str(i)+']/td[4]').text
+            rep['FechaDesde']=driver.find_element_by_xpath('//*[@id="print"]/table[2]/tbody/tr/td/table/tbody/tr/td/table/tbody/tr['+str(i)+']/td[5]').text
+            result['RepresentantesLegales'].append(rep)
+        except Exception as e:
+            break
+        i+=1
+    driver.back()
+
+    #Trabajadores y Prestatarios
+    driver.find_element_by_xpath('//*[@id="div_estrep"]/table/tbody/tr[1]/td[4]/form/input[1]').click()
+    sleep(2)
+    result['Periodico'] = []
+    i = 3
+    while 1:
+        try:
+            reg = {}
+            reg['Periodo'] = driver.find_element_by_xpath(
+                '//*[@id="print"]/table[3]/tbody/tr/td/table/tbody/tr['+str(i)+']/td[1]').text
+            reg['NroTrabajadores'] = driver.find_element_by_xpath(
+                '//*[@id="print"]/table[3]/tbody/tr/td/table/tbody/tr['+str(i)+']/td[2]').text
+            reg['NroPensionistas'] = driver.find_element_by_xpath(
+                '//*[@id="print"]/table[3]/tbody/tr/td/table/tbody/tr['+str(i)+']/td[3]').text
+            reg['NroPrestadores'] = driver.find_element_by_xpath(
+                '//*[@id="print"]/table[3]/tbody/tr/td/table/tbody/tr['+str(i)+']/td[4]').text
+            result['Periodico'].append(reg)
+        except Exception as e:
+            break
+        i += 1
+    driver.back()
+
+    return result
 
 
 
 def procesaCaptcha(driver):
     driver.save_screenshot("screencaptcha.png")
     img = Image.open("screencaptcha.png")
-    img_aux = img.crop((790, 30, 890, 80))
+    img_aux = img.crop((804, 35, 910, 90))
     img_aux.save("captcha.png")
 
     # convert color img to black and white, using OpenCV
@@ -34,63 +138,93 @@ def procesaCaptcha(driver):
         return ""
 
 
-def getData(driver,ruc):
-    sleep(1)
-    driver.find_element_by_xpath('//*[@id="s1"]/input').clear()
-    driver.find_element_by_xpath('//*[@id="s1"]/input').send_keys(ruc)
-
-    main_page_hadler=driver.window_handles[0]
-
+def getData(driver,url,ruc):
+    result={}
     n_err=0
 
     while n_err<5:
         flag=0
-        capt='AAAA'
-        # capt=procesaCaptcha(driver)
+
+        #Inserta RUC
+        driver.get(url)
+        sleep(2)
+
+        driver.find_element_by_xpath('//*[@id="s1"]/input').clear()
+        driver.find_element_by_xpath('//*[@id="s1"]/input').send_keys(ruc)
+
+        #CAPTCHA
+        capt = ''
+        while len(capt)!=4:
+            driver.find_element_by_xpath('/html/body/form/table/tbody/tr/td/table[2]/tbody/tr[2]/td[4]/a').click()
+            sleep(8)
+            driver.set_window_size(1124, 850)
+            capt = procesaCaptcha(driver)
+            print(capt)
+
+
         driver.find_element_by_xpath('/html/body/form/table/tbody/tr/td/table[2]/tbody/tr[1]/td[6]/input').clear()
         driver.find_element_by_xpath('/html/body/form/table/tbody/tr/td/table[2]/tbody/tr[1]/td[6]/input').send_keys(capt)
-        sleep(5)
+        driver.save_screenshot("insertcaptcha.png")
         driver.find_element_by_xpath('/html/body/form/table/tbody/tr/td/table[2]/tbody/tr[1]/td[7]/input').click()
+
+        #ALERTA
 
         try:
             driver.switch_to_alert().accept()
-            print('fallo')
+            print('ALERTA: fallo')
             flag += 1
         except Exception as e:
-            print('wtf')
+            #print('pass')
+            pass
 
+        #print(driver.window_handles)
 
-        if len(driver.window_handles)>1:
-            aux=driver.window_handles
-            flag+=1
-            for i in aux:
-                if i != main_page_hadler:
-                    driver.switch_to_window(i)
-                    driver.close()
-            driver.switch_to_window(main_page_hadler)
+        if len(driver.window_handles)==2:
+            aux = driver.window_handles
+            driver.close()
+            driver.switch_to_window(aux[1])
 
-        if flag==0:
-            collectData(driver)
-        else:
+        sleep(2)
+        #Verificacion de pagina de datos
+        try:
+            verif=driver.find_element_by_xpath('/html/body/table[1]/tbody/tr[1]/td[1]')
+            if "RUC" in verif:
+                print('data ready for: ' + str(ruc))
+                result=collectData(driver,ruc)
+
+                return result
+            else:
+                n_err+=1
+        except Exception as e:
+            driver.save_screenshot("errorcaptcha.png")
             n_err+=1
 
-
+        print(str(ruc)+' va ' +str(n_err)+' errores')
 
 
 
 
 def main(rucs):
     url='http://e-consultaruc.sunat.gob.pe/cl-ti-itmrconsruc/frameCriterioBusqueda.jsp'
-
-    driver =  webdriver.Chrome('chromedriver.exe')
+    #url='http://e-consultaruc.sunat.gob.pe/cl-ti-itmrconsruc/jcrS00Alias'
+    #driver =  webdriver.Chrome('chromedriver.exe')
+    driver=get_driver()
     driver.set_window_size(1124, 850)
-    driver.get(url)
-
+    #driver.get(url)
+    rucs=rucs[:5] #test
+    dataset=[]
     for ruc in rucs:
-        getData(driver,str(ruc))
+        data=getData(driver,url,str(ruc))
+        dataset.append(data)
+        print(data)
+
+    print(dataset)
+
+
 
 
 if __name__ == '__main__':
+    pytesseract.pytesseract.tesseract_cmd = 'C:/Program Files (x86)/Tesseract-OCR/tesseract.exe'
     start_time = time()
     df=pd.read_csv('ruc.txt')
     rucs=list(df['RUC'].values)

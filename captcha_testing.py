@@ -1,4 +1,4 @@
-import urllib.request
+import urllib2
 import os
 import cv2
 import numpy as np
@@ -10,7 +10,7 @@ def getCaptcha(cant,target):
     if not os.path.exists(directory):
         os.makedirs(directory)
     for i in range(cant):
-        url = urllib.request.urlopen(target)
+        url = urllib2.urlopen(target)
         tImg= "./tmp/" + str(i) + ".png"
         with open(tImg, 'wb') as f:
             f.write(url.read())
@@ -65,6 +65,7 @@ def run_tests(n,target):
     deleteCaptcha()
 
 if __name__ == "__main__":
+    pytesseract.pytesseract.tesseract_cmd = 'C:/Program Files (x86)/Tesseract-OCR/tesseract.exe'
     target = 'http://www.sunat.gob.pe/cl-ti-itmrconsruc/captcha?accion=image'
     n=5
     run_tests(n,target)
