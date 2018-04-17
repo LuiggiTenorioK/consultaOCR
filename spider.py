@@ -96,7 +96,7 @@ def subCollectPeriodo(driver,result):
     # Trabajadores y Prestatarios
     driver.find_element_by_xpath('//*[@id="div_estrep"]/table/tbody/tr[1]/td[4]/form/input[1]').click()
     sleep(2)
-    result['Periodico'] = []
+    result['Periodico'] = list()
     i = 3
     while 1:
         try:
@@ -131,11 +131,21 @@ def collectData(driver):
     result['Estado']=driver.find_element_by_xpath('/html/body/table[1]/tbody/tr[5]/td[2]').text
     result['Condicion']=driver.find_element_by_xpath('/html/body/table[1]/tbody/tr[6]/td[2]').text
     result['Direccion'] = driver.find_element_by_xpath('/html/body/table[1]/tbody/tr[7]/td[2]').text
-    result['ActividadesEconomicas'] = driver.find_element_by_xpath('/html/body/table[1]/tbody/tr[10]/td[2]/select').get_attribute("innerHTML")
-    print('previo')
-    print(result)
+    #result['ActividadesEconomicas'] = driver.find_element_by_xpath('/html/body/table[1]/tbody/tr[10]/td[2]/select').get_attribute("innerHTML")
+    result['ActividadesEconomicas']=list()
+    i=1
+    while 1:
+        try:
+            result['ActividadesEconomicas'].append(
+                driver.find_element_by_xpath('/html/body/table[1]/tbody/tr[10]/td[2]/select/option['+str(i)+']').text);
+        except Exception as e:
+            break
+        i += 1
 
-    print(driver.current_url)
+    #print('previo')
+    #print(result)
+
+    #print(driver.current_url)
 
     pickle.dump(driver.get_cookies(), open("cookies.pkl", "wb"))
     result=subCollectRepresentanteLegal(copy.copy(driver),result)
@@ -144,17 +154,13 @@ def collectData(driver):
     print(result)
     driver.save_screenshot("info.png")
 
-    pickle.dump(driver.get_cookies(), open("cookies.pkl", "wb"))
-    result=subCollectPeriodo(driver,result)
+    #pickle.dump(driver.get_cookies(), open("cookies.pkl", "wb"))
+    #result=subCollectPeriodo(driver,result)
 
-    print('previo')
-    print(result)
-    driver.save_screenshot("info.png")
+    #print('previo')
+    #print(result)
+    #driver.save_screenshot("info.png")
 
-    '''
-    driver.find_element_by_xpath('//*[@id="div_estrep"]/table/tbody/tr[1]/td/div/input').click()
-    driver.find_element_by_xpath('/html/body/table[1]/tbody/tr[1]/td/div/input').click()
-    '''
     return result
 
 
@@ -203,21 +209,16 @@ def getData(driver,url,ruc):
         while len(capt)!=4:
             driver.set_window_size(1124, 850)
             driver.save_screenshot("screencaptcha.png")
-            img = Image.open("screencaptcha.png")
-            img1 = img.crop((804, 35, 910, 90))
+            img1 = Image.open("screencaptcha.png").crop((804, 35, 910, 90))
             driver.find_element_by_xpath('/html/body/form/table/tbody/tr/td/table[2]/tbody/tr[2]/td[4]/a').click()
             driver.save_screenshot("screencaptcha.png")
-            img = Image.open("screencaptcha.png")
-            img2 = img.crop((804, 35, 910, 90))
-
+            img2 = Image.open("screencaptcha.png").crop((804, 35, 910, 90))
+            print 'Cargando captcha',
             while img1==img2:
                 driver.save_screenshot("screencaptcha.png")
-                img = Image.open("screencaptcha.png")
-                img2 = img.crop((804, 35, 910, 90))
+                img2 = Image.open("screencaptcha.png").crop((804, 35, 910, 90))
                 sleep(1)
-                print('Cargando captcha')
-
-
+                print '.',
 
             capt = procesaCaptcha(driver)
             print(capt)
