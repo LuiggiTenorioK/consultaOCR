@@ -280,6 +280,10 @@ def main(rucs):
         dataset.append(data)
         print(data)
 
+    import json
+
+    with open('data.json', 'w') as fp:
+        json.dump(dataset, fp)
     print(dataset)
 
 
@@ -292,5 +296,5 @@ if __name__ == '__main__':
     rucs=list(df['RUC'].values)
     main(rucs)
 
-    a = 0
+    a = ''
     input(a)
